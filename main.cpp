@@ -98,33 +98,21 @@ private:
     }
 };
 
+void TestFile(std::ofstream& out, const std::string& file_name) {
+    auto t_start = std::chrono::high_resolution_clock::now();
+    FloydWarshall FW(file_name);
+    FW.GenerateDistanceMatrix();
+    auto t_stop = std::chrono::high_resolution_clock::now();
+    auto t_duration = std::chrono::duration_cast<std::chrono::microseconds>(t_stop - t_start);
+    out << "Time duration: " << t_duration.count() / 1000.0 << " ms\n";
+}
+
 void RunTimeTest() {
     std::ofstream log_file("log.txt");
 
-    FloydWarshall FW1("test1.txt");
-    auto t1_start = std::chrono::high_resolution_clock::now();
-    FW1.GenerateDistanceMatrix();
-    auto t1_stop = std::chrono::high_resolution_clock::now();
-    FW1.PrintDistances("test1-ouput.txt");
-    auto t1_duration = std::chrono::duration_cast<std::chrono::milliseconds>(t1_stop - t1_start);
-    log_file << "Time duration 10 edges: " << t1_duration.count() << "ms\n";
-
-
-    FloydWarshall FW2("test2.txt");
-    auto t2_start = std::chrono::high_resolution_clock::now();
-    FW2.GenerateDistanceMatrix();
-    auto t2_stop = std::chrono::high_resolution_clock::now();
-    FW2.PrintDistances("test2-ouput.txt");
-    auto t2_duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2_stop - t2_start);
-    log_file << "Time duration 100 edges: " << t2_duration.count() << "ms\n";
-
-    FloydWarshall FW3("test3.txt");
-    auto t3_start = std::chrono::high_resolution_clock::now();
-    FW3.GenerateDistanceMatrix();
-    auto t3_stop = std::chrono::high_resolution_clock::now();
-    FW3.PrintDistances("test3-ouput.txt");
-    auto t3_duration = std::chrono::duration_cast<std::chrono::milliseconds>(t3_stop - t3_start);
-    log_file << "Time duration 1000 edges: " << t3_duration.count() << "ms\n";
+    TestFile(log_file, "test1.txt");
+    TestFile(log_file, "test2.txt");
+    TestFile(log_file, "test3.txt");
 
     log_file.close();
 }
@@ -137,7 +125,7 @@ int main(int argc, char* argv[]) {
     FloydWarshall FW(argv[1]);
     FW.GenerateDistanceMatrix();
     FW.PrintDistances(argv[2]);
-    
+
     RunTimeTest();
     
     std::cout << "Succes!\n";
