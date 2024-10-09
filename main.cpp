@@ -1,44 +1,44 @@
 #include <algorithm>
+#include <chrono>
+#include <cmath>
 #include <fstream>
 #include <iostream>
-#include <limits>
 #include <map>
 #include <numeric>
 #include <string>
-#include <utility>
 
 const double DOUBLE_MAX = std::numeric_limits<double>::max();
 
 class FloydWarshall {
 public:
     FloydWarshall(const std::string& file_name) {
-        InitEdges(file_name);
+        InitEdges("input/" + file_name);
         InitDistanceMatrix();
     }
 
     void GenerateDistanceMatrix() {
         for_each_vertex([this](int k) {
             for_each_vertex_pair([this, k](int i, int j) {
-                double ik = dist_matrix_.count({ i, k }) ? dist_matrix_[{i, k}] : DOUBLE_MAX;
-                double kj = dist_matrix_.count({ k, j }) ? dist_matrix_[{k, j}] : DOUBLE_MAX;
-                double ij = dist_matrix_.count({ i, j }) ? dist_matrix_[{i, j}] : DOUBLE_MAX;
-
-                if (ik != DOUBLE_MAX && kj != DOUBLE_MAX && ik + kj < ij) {
-                    dist_matrix_[{i, j}] = ik + kj;
-                }
+                double i_k = dist_matrix_[{i, k}];
+                double k_j = dist_matrix_[{k, j}];
+                double i_j = dist_matrix_[{i, j}];
+                
+                dist_matrix_[{i, j}] = std::min(i_k + k_j, i_j);
                 });
             });
     }
 
     void PrintDistances(const std::string& file_name) {
-        std::ofstream file_out(file_name);
+        std::ofstream file_out("output/" + file_name);
         for_each_vertex_pair([this, &file_out](int lhs, int rhs) {
             double dist = dist_matrix_[{lhs, rhs}];
-            if (dist == DOUBLE_MAX) {
-                file_out << "from: " << lhs << " to: " << rhs << " - " << "INF" << "\n";
-            }
-            else {
-                file_out << "from: " << lhs << " to: " << rhs << " - " << dist << "\n";
+            if (lhs != rhs) {
+                if (dist == DOUBLE_MAX) {
+                    file_out << "from: " << lhs << " to: " << rhs << " - " << "INF" << "\n";
+                }
+                else {
+                    file_out << "from: " << lhs << " to: " << rhs << " - " << dist << "\n";
+                }
             }
             });
         file_out.close();
@@ -53,7 +53,7 @@ private:
             if (lhs == rhs) {
                 dist_matrix_[{lhs, lhs}] = 0;
             }
-            else if (dist_matrix_.find({lhs, rhs}) == dist_matrix_.end()) {
+            else if (!dist_matrix_.count({lhs, rhs})) {
                 dist_matrix_[{lhs, rhs}] = DOUBLE_MAX;
             }
         });
@@ -98,6 +98,37 @@ private:
     }
 };
 
+void RunTimeTest() {
+    std::ofstream log_file("log.txt");
+
+    FloydWarshall FW1("test1.txt");
+    auto t1_start = std::chrono::high_resolution_clock::now();
+    FW1.GenerateDistanceMatrix();
+    auto t1_stop = std::chrono::high_resolution_clock::now();
+    FW1.PrintDistances("test1-ouput.txt");
+    auto t1_duration = std::chrono::duration_cast<std::chrono::milliseconds>(t1_stop - t1_start);
+    log_file << "Time duration 10 edges: " << t1_duration.count() << "ms\n";
+
+
+    FloydWarshall FW2("test2.txt");
+    auto t2_start = std::chrono::high_resolution_clock::now();
+    FW2.GenerateDistanceMatrix();
+    auto t2_stop = std::chrono::high_resolution_clock::now();
+    FW2.PrintDistances("test2-ouput.txt");
+    auto t2_duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2_stop - t2_start);
+    log_file << "Time duration 100 edges: " << t2_duration.count() << "ms\n";
+
+    FloydWarshall FW3("test3.txt");
+    auto t3_start = std::chrono::high_resolution_clock::now();
+    FW3.GenerateDistanceMatrix();
+    auto t3_stop = std::chrono::high_resolution_clock::now();
+    FW3.PrintDistances("test3-ouput.txt");
+    auto t3_duration = std::chrono::duration_cast<std::chrono::milliseconds>(t3_stop - t3_start);
+    log_file << "Time duration 1000 edges: " << t3_duration.count() << "ms\n";
+
+    log_file.close();
+}
+
 int main(int argc, char* argv[]) {
     if (argc != 3) {
         std::cerr << "Usage: <FileNameToLoad> <FileNameToSave>" << std::endl;
@@ -106,18 +137,8 @@ int main(int argc, char* argv[]) {
     FloydWarshall FW(argv[1]);
     FW.GenerateDistanceMatrix();
     FW.PrintDistances(argv[2]);
+    
+    RunTimeTest();
+    
     return 0;
 }
-
-/*
-Написать программу, которая будет применять указанный в варианте алгоритм к входным графам, заданным в файлах.
-То, как описаны графы в файлах, остаётся на выбор студента.
-Формат записи результата работы алгоритма в файл не регламентирован и устанавливается студентом.
-В отчёте для каждого варианта требуется:
-* указать сложность алгоритма и доказать, что она именно такая;
-* сравнение работы алгоритма на различных допустимых входных данных:
-на каких графах алгоритм работает лучше, на каких – хуже, на каких – вообще не работает;
-* объяснить почему был выбран тот или иной способ представления графов в программе.
- 
-На вход программе подаётся взвешенный орграф.
-*/
