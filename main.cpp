@@ -140,5 +140,6 @@ int main(int argc, char* argv[]) {
     
     RunTimeTest();
     
+    std::cout << "Succes!\n";
     return 0;
 }
