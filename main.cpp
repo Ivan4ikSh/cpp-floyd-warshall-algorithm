@@ -6,6 +6,7 @@
 #include <map>
 #include <numeric>
 #include <string>
+#include <vector>
 
 const double DOUBLE_MAX = std::numeric_limits<double>::max();
 
@@ -17,12 +18,12 @@ public:
     }
 
     void GenerateDistanceMatrix() {
-        for_each_vertex([this](int k) {
-            for_each_vertex_pair([this, k](int i, int j) {
+        for_each_vertex([this](const std::string& k) {
+            for_each_vertex_pair([this, k](const std::string& i, const std::string& j) {
                 double i_k = dist_matrix_[{i, k}];
                 double k_j = dist_matrix_[{k, j}];
                 double i_j = dist_matrix_[{i, j}];
-                
+
                 dist_matrix_[{i, j}] = std::min(i_k + k_j, i_j);
                 });
             });
@@ -30,14 +31,15 @@ public:
 
     void PrintDistances(const std::string& file_name) {
         std::ofstream file_out("output/" + file_name);
-        for_each_vertex_pair([this, &file_out](int lhs, int rhs) {
+        for_each_vertex_pair([this, &file_out](const std::string& lhs, const std::string& rhs) {
             double dist = dist_matrix_[{lhs, rhs}];
             if (lhs != rhs) {
+                file_out << "from: " << lhs << " to: " << rhs;
                 if (dist == DOUBLE_MAX) {
-                    file_out << "from: " << lhs << " to: " << rhs << " - " << "INF" << "\n";
+                    file_out << " - INF\n";
                 }
                 else {
-                    file_out << "from: " << lhs << " to: " << rhs << " - " << dist << "\n";
+                    file_out << " - " << dist << "\n";
                 }
             }
             });
@@ -45,33 +47,42 @@ public:
     }
 
 private:
-    std::map<std::pair<int, int>, double> dist_matrix_;
-    int max_vertex_ = 0;
+    std::map<std::pair<std::string, std::string>, double> dist_matrix_;
+    std::vector<std::string> vertices_;
 
     void InitDistanceMatrix() {
-        for_each_vertex_pair([this](int lhs, int rhs) {
+        for_each_vertex_pair([this](const std::string& lhs, const std::string& rhs) {
             if (lhs == rhs) {
                 dist_matrix_[{lhs, lhs}] = 0;
             }
-            else if (!dist_matrix_.count({lhs, rhs})) {
+            else if (!dist_matrix_.count({ lhs, rhs })) {
                 dist_matrix_[{lhs, rhs}] = DOUBLE_MAX;
             }
-        });
+            });
     }
 
     void InitEdges(const std::string& file_name) {
         std::ifstream input_file(file_name);
+        std::string lhs, rhs;
+        double w;
 
-        for_each_edge(input_file, [this](int lhs, int rhs, double w) {
+        while (input_file >> lhs >> rhs >> w) {
             dist_matrix_[{lhs, rhs}] = w;
-            max_vertex_ = std::max({ max_vertex_, lhs, rhs });
-            });
+            if (std::find(vertices_.begin(), vertices_.end(), lhs) == vertices_.end()) {
+                vertices_.push_back(lhs);
+            }
+            if (std::find(vertices_.begin(), vertices_.end(), rhs) == vertices_.end()) {
+                vertices_.push_back(rhs);
+            }
+        }
+
+        input_file.close();
     }
 
     template<typename Func>
     void for_each_vertex_pair(Func func) const {
-        for (int lhs = 0; lhs <= max_vertex_; ++lhs) {
-            for (int rhs = 0; rhs <= max_vertex_; ++rhs) {
+        for (const auto& lhs : vertices_) {
+            for (const auto& rhs : vertices_) {
                 func(lhs, rhs);
             }
         }
@@ -79,21 +90,8 @@ private:
 
     template<typename Func>
     void for_each_vertex(Func func) const {
-        for (int v = 0; v <= max_vertex_; ++v) {
+        for (const auto& v : vertices_) {
             func(v);
-        }
-    }
-
-    template<typename Func>
-    void for_each_edge(std::ifstream& input_file, Func func) {
-        int n;
-        input_file >> n;
-
-        for (int i = 0; i < n; ++i) {
-            int lhs, rhs;
-            double w;
-            input_file >> lhs >> rhs >> w;
-            func(lhs, rhs, w);
         }
     }
 };
