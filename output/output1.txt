@@ -1,6 +1,6 @@
-from: v1 to: v2 - -0.2
-from: v1 to: v3 - 3.2
+from: v1 to: v2 - -0.2 via path: v1-v2
+from: v1 to: v3 - 3.2 via path: v1-v3
 from: v2 to: v1 - INF
-from: v2 to: v3 - 4.4
+from: v2 to: v3 - 4.4 via path: v2-v3
 from: v3 to: v1 - INF
 from: v3 to: v2 - INF

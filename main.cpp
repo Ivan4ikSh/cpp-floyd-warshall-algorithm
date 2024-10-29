@@ -7,8 +7,16 @@
 #include <numeric>
 #include <string>
 #include <vector>
+#include <exception>
 
 const double DOUBLE_MAX = std::numeric_limits<double>::max();
+
+class CycleDetectedException : public std::exception {
+public:
+    const char* what() const noexcept override {
+        return "Cycle detected in the graph!";
+    }
+};
 
 class FloydWarshall {
 public:
@@ -24,9 +32,12 @@ public:
                 double k_j = dist_matrix_[{k, j}];
                 double i_j = dist_matrix_[{i, j}];
 
-                dist_matrix_[{i, j}] = std::min(i_k + k_j, i_j);
-                });
+                if (i_k < DOUBLE_MAX && k_j < DOUBLE_MAX && i_k + k_j < i_j) {
+                    dist_matrix_[{i, j}] = i_k + k_j;
+                    next_vertex_[{i, j}] = next_vertex_[{i, k}];
+                }
             });
+        });
     }
 
     void PrintDistances(const std::string& file_name) {
@@ -39,15 +50,16 @@ public:
                     file_out << " - INF\n";
                 }
                 else {
-                    file_out << " - " << dist << "\n";
+                    file_out << " - " << dist << " via path: " << GetPath(lhs, rhs) << "\n";
                 }
             }
-            });
+        });
         file_out.close();
     }
 
 private:
     std::map<std::pair<std::string, std::string>, double> dist_matrix_;
+    std::map<std::pair<std::string, std::string>, std::string> next_vertex_;
     std::vector<std::string> vertices_;
 
     void InitDistanceMatrix() {
@@ -58,7 +70,7 @@ private:
             else if (!dist_matrix_.count({ lhs, rhs })) {
                 dist_matrix_[{lhs, rhs}] = DOUBLE_MAX;
             }
-            });
+        });
     }
 
     void InitEdges(const std::string& file_name) {
@@ -68,6 +80,7 @@ private:
 
         while (input_file >> lhs >> rhs >> w) {
             dist_matrix_[{lhs, rhs}] = w;
+            next_vertex_[{lhs, rhs}] = rhs;
             if (std::find(vertices_.begin(), vertices_.end(), lhs) == vertices_.end()) {
                 vertices_.push_back(lhs);
             }
@@ -93,6 +106,29 @@ private:
         for (const auto& v : vertices_) {
             func(v);
         }
+    }
+
+    std::string GetPath(const std::string& start, const std::string& end) const {
+        if (dist_matrix_.at({ start, end }) == DOUBLE_MAX) {
+            return "No path";
+        }
+
+        std::string path = start;
+        std::string current = start;
+
+        while (current != end) {
+            current = next_vertex_.at({ current, end });
+            if (current == end) {
+                path += "-" + current;
+                break;
+            }
+            if (path.find(current) != std::string::npos) {
+                throw CycleDetectedException();
+            }
+            path += "-" + current;
+        }
+
+        return path;
     }
 };
 
@@ -120,12 +156,22 @@ int main(int argc, char* argv[]) {
         std::cerr << "Usage: <FileNameToLoad> <FileNameToSave>" << std::endl;
         return 1;
     }
-    FloydWarshall FW(argv[1]);
-    FW.GenerateDistanceMatrix();
-    FW.PrintDistances(argv[2]);
+
+    try {
+        FloydWarshall FW(argv[1]);
+        FW.GenerateDistanceMatrix();
+        FW.PrintDistances(argv[2]);
+    }
+    catch (const CycleDetectedException& e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "An error occurred: " << e.what() << std::endl;
+        return 1;
+    }
 
     RunTimeTest();
-    
-    std::cout << "Succes!\n";
+    std::cout << "Success!\n";
     return 0;
 }
